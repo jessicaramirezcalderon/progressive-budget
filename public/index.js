@@ -1,5 +1,40 @@
+const FAILED_TRANSACTIONS_CACHE = 'FAILED_TRANSACTIONS';
 let transactions = [];
 let myChart;
+
+function postTransaction(transaction) {
+  return fetch("/api/transaction", {
+    method: "POST",
+    body: JSON.stringify(transaction),
+    headers: {
+      Accept: "application/json, text/plain, */*",
+      "Content-Type": "application/json"
+    }
+  })
+  .then(response => {    
+    return response.json();
+  });
+}
+
+function saveRecord(transaction) {
+  const savedRecords = localStorage.getItem(FAILED_TRANSACTIONS_CACHE);
+
+  if (savedRecords) {
+    let records = JSON.parse(savedRecords);
+    records.push(transaction);
+    localStorage.setItem(FAILED_TRANSACTIONS_CACHE, JSON.stringify(records));
+  } else {
+    localStorage.setItem(FAILED_TRANSACTIONS_CACHE, JSON.stringify([transaction]));
+  }
+}
+
+function sendTransactions() {
+  let failedTransactions = localStorage.getItem(FAILED_TRANSACTIONS_CACHE);
+
+  if (failedTransactions) {
+    JSON.parse(failedTransactions).forEach((transaction) => postTransaction(transaction));
+  }
+}
 
 fetch("/api/transaction")
   .then(response => {
@@ -113,17 +148,7 @@ function sendTransaction(isAdding) {
   populateTotal();
   
   // also send to server
-  fetch("/api/transaction", {
-    method: "POST",
-    body: JSON.stringify(transaction),
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => {    
-    return response.json();
-  })
+  postTransaction(transaction)
   .then(data => {
     if (data.errors) {
       errorEl.textContent = "Missing Information";
